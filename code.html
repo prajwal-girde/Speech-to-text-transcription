@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Google Speech Translator Inspired - Speech-to-Text Transcription Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Material+Icons" rel="stylesheet" />
+<style>
+  /* Reset and base */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  html {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #e8f5e9 0%, #a5d6a7 100%);
+    color: #1b1b1b;
+    min-height: 100vh;
+    scroll-behavior: smooth;
+  }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Container */
+  .app-container {
+    background: rgba(255 255 255 / 0.85);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-radius: 24px;
+    box-shadow: 0 16px 32px rgba(0,0,0,0.08);
+    max-width: 480px;
+    width: 100%;
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+  }
+  header h1 {
+    font-weight: 700;
+    font-size: 1.9rem;
+    color: #2e7d32;
+    margin-bottom: 4px;
+    user-select: none;
+  }
+  header p {
+    font-weight: 500;
+    font-size: 1rem;
+    color: #388e3c;
+    user-select: none;
+  }
+
+  /* Language selection */
+  .language-select-wrapper {
+    display: flex;
+    justify-content: center;
+  }
+  select#language-select {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    border: 2px solid #a5d6a7;
+    border-radius: 12px;
+    background: white;
+    padding: 10px 16px;
+    width: 100%;
+    max-width: 280px;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+  }
+  select#language-select:focus {
+    outline: none;
+    border-color: #2e7d32;
+    box-shadow: 0 0 8px #2e7d32aa;
+  }
+
+  /* Text output area */
+  #transcript {
+    flex-grow: 1;
+    min-height: 160px;
+    background: rgba(232, 245, 233, 0.6);
+    border-radius: 16px;
+    padding: 16px 20px;
+    font-size: 1.125rem;
+    color: #1b5e20;
+    box-shadow: inset 0 0 8px rgba(165, 214, 167, 0.6);
+    overflow-y: auto;
+    line-height: 1.5;
+    user-select: text;
+    white-space: pre-wrap;
+  }
+
+  /* Buttons container */
+  .buttons {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    margin-top: 8px;
+  }
+
+  /* Mic button */
+  button#mic-button {
+    position: relative;
+    background: linear-gradient(135deg, #388e3c, #81c784);
+    border: none;
+    border-radius: 50%;
+    width: 72px;
+    height: 72px;
+    box-shadow: 0 10px 24px #388e3c80;
+    cursor: pointer;
+    color: white;
+    font-size: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    user-select: none;
+    outline-offset: 4px;
+  }
+  button#mic-button:hover {
+    transform: scale(1.08);
+    box-shadow: 0 14px 32px #2e7d3280;
+  }
+  button#mic-button:focus-visible {
+    outline: 3px solid #a5d6a7;
+    outline-offset: 6px;
+  }
+
+  /* Pulse animation when listening */
+  @keyframes pulseGlow {
+    0% {
+      box-shadow: 0 0 0 0 rgba(56, 142, 60, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 20px rgba(56, 142, 60, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(56, 142, 60, 0);
+    }
+  }
+  button#mic-button.listening {
+    animation: pulseGlow 2s infinite;
+  }
+
+  /* Clear button */
+  button#clear-button {
+    background: linear-gradient(135deg, #d32f2f, #ef5350);
+    border: none;
+    border-radius: 16px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 8px 20px #d32f2f80;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+  }
+  button#clear-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 28px #b71c1caa;
+  }
+  button#clear-button:focus-visible {
+    outline: 3px solid #ef9a9a;
+    outline-offset: 4px;
+  }
+
+  /* Status area */
+  .status {
+    text-align: center;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #388e3c;
+    min-height: 28px;
+    user-select: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .app-container {
+      padding: 24px 18px;
+      max-width: 100vw;
+      border-radius: 16px;
+    }
+    button#mic-button {
+      width: 64px;
+      height: 64px;
+      font-size: 28px;
+    }
+    #transcript {
+      min-height: 140px;
+      font-size: 1rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <main class="app-container" role="main" aria-label="Speech to text transcription application">
+    <header>
+      <h1>Speech-to-Text Transcription</h1>
+      <p>A friendly, interactive Google Speech Translator inspired tool</p>
+    </header>
+    <div class="language-select-wrapper">
+      <label for="language-select" class="visually-hidden">Select Recognition Language</label>
+      <select id="language-select" aria-live="polite" aria-label="Choose Language for transcription">
+        <option value="en-US" selected>English (US)</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="es-ES">Spanish (Spain)</option>
+        <option value="fr-FR">French (France)</option>
+        <option value="de-DE">German (Germany)</option>
+        <option value="zh-CN">Chinese (Mandarin)</option>
+        <option value="ja-JP">Japanese</option>
+        <option value="ko-KR">Korean</option>
+        <option value="ru-RU">Russian</option>
+        <option value="it-IT">Italian</option>
+      </select>
+    </div>
+    <section id="transcript" aria-live="polite" aria-atomic="true" role="region" tabindex="0" aria-label="Transcribed text will appear here">
+      <p>Press the microphone button and start speaking...</p>
+    </section>
+    <div class="buttons" role="group" aria-label="Control speech recognition">
+      <button id="mic-button" aria-pressed="false" aria-label="Start speech recognition" type="button" title="Start or stop speech recognition">
+        <span class="material-icons" aria-hidden="true">mic</span>
+      </button>
+      <button id="clear-button" type="button" aria-label="Clear transcription" title="Clear transcribed text">Clear</button>
+    </div>
+    <div class="status" aria-live="polite" aria-atomic="true" role="status" id="status-message"></div>
+  </main>
+
+  <script>
+    (() => {
+      const micButton = document.getElementById('mic-button');
+      const clearButton = document.getElementById('clear-button');
+      const transcriptElem = document.getElementById('transcript');
+      const statusElem = document.getElementById('status-message');
+      const languageSelect = document.getElementById('language-select');
+      let recognizing = false;
+      let recognition;
+      let finalTranscript = '';
+
+      // Check for browser support
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+      function updateStatus(message, isError = false) {
+        statusElem.textContent = message;
+        statusElem.style.color = isError ? '#d32f2f' : '#388e3c';
+      }
+
+      function resetTranscript() {
+        finalTranscript = '';
+        transcriptElem.textContent = 'Press the microphone button and start speaking...';
+      }
+
+      function initRecognition() {
+        if (!SpeechRecognition) {
+          updateStatus('Speech Recognition API is not supported in this browser.', true);
+          micButton.disabled = true;
+          return null;
+        }
+
+        const recognitionInstance = new SpeechRecognition();
+
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = languageSelect.value;
+
+        recognitionInstance.onstart = () => {
+          recognizing = true;
+          micButton.classList.add('listening');
+          micButton.setAttribute('aria-pressed', 'true');
+          micButton.setAttribute('aria-label', 'Stop speech recognition');
+          updateStatus('Listening...');
+          // Clear placeholder text on start
+          if (finalTranscript === '' || transcriptElem.textContent === 'Press the microphone button and start speaking...') {
+            transcriptElem.textContent = '';
+          }
+        };
+
+        recognitionInstance.onerror = (event) => {
+          let message = '';
+          switch (event.error) {
+            case 'no-speech':
+              message = 'No speech was detected. Please try again.';
+              break;
+            case 'audio-capture':
+              message = 'No microphone was found. Please check your microphone.';
+              break;
+            case 'not-allowed':
+              message = 'Permission to use microphone was denied.';
+              break;
+            default:
+              message = `Error occurred in recognition: ${event.error}`;
+              break;
+          }
+          updateStatus(message, true);
+          stopRecognition();
+        };
+
+        recognitionInstance.onend = () => {
+          recognizing = false;
+          micButton.classList.remove('listening');
+          micButton.setAttribute('aria-pressed', 'false');
+          micButton.setAttribute('aria-label', 'Start speech recognition');
+          if (finalTranscript === '') {
+            transcriptElem.textContent = 'Press the microphone button and start speaking...';
+            updateStatus('Click the microphone to start speaking');
+          } else {
+            updateStatus('Recognition stopped');
+          }
+        };
+
+        recognitionInstance.onresult = (event) => {
+          let interimTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          transcriptElem.textContent = finalTranscript + (interimTranscript ? '\n' + interimTranscript : '');
+          transcriptElem.scrollTop = transcriptElem.scrollHeight;
+        };
+
+        return recognitionInstance;
+      }
+
+      function startRecognition() {
+        if (!recognition) {
+          recognition = initRecognition();
+          if (!recognition) return;
+        }
+        recognition.lang = languageSelect.value;
+        try {
+          recognition.start();
+        } catch (err) {
+          updateStatus('Speech recognition is already started.', true);
+        }
+      }
+
+      function stopRecognition() {
+        if (recognition && recognizing) {
+          recognition.stop();
+        }
+      }
+
+      micButton.addEventListener('click', () => {
+        if (recognizing) {
+          stopRecognition();
+        } else {
+          updateStatus('');
+          startRecognition();
+        }
+      });
+
+      clearButton.addEventListener('click', () => {
+        resetTranscript();
+        updateStatus('Transcription cleared');
+      });
+
+      languageSelect.addEventListener('change', () => {
+        // If recognizing, restart recognition with new language
+        if (recognizing) {
+          recognition.stop();
+          recognition = null;
+          startRecognition();
+          updateStatus(`Language changed to ${languageSelect.options[languageSelect.selectedIndex].text}`);
+        }
+      });
+
+      // Accessibility: visually-hidden class for label
+      const styleVisuallyHidden = document.createElement('style');
+      styleVisuallyHidden.textContent = `
+        .visually-hidden {
+          border: 0;
+          clip: rect(0 0 0 0);
+          height: 1px;
+          margin: -1px;
+          overflow: hidden;
+          padding: 0;
+          position: absolute;
+          width: 1px;
+          white-space: nowrap;
+        }
+      `;
+      document.head.appendChild(styleVisuallyHidden);
+
+      // Initial status
+      updateStatus('Click the microphone to start speaking');
+    })();
+  </script>
+</body>
+</html>
+
